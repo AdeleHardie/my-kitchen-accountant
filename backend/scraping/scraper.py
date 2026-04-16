@@ -1,5 +1,6 @@
 # --- Standard libraries
 from datetime import datetime
+from time import sleep
 
 # --- Web scraping ---
 from selenium import webdriver
@@ -27,39 +28,47 @@ class AldiScraper:
         self.unit_lookup = UnitLookup(self.db_connection)
         self.updater = IngredientUpdater(self.db_connection)
 
+    def _scrape_page(self, page: int, section: str) -> bool:
+        self.driver = webdriver.Firefox(options=self.options)
+        self.driver.implicitly_wait(5)
+        page_url = f"{self.URL}/products/{section}?page={page}"
+        self.driver.get(page_url)
+        page_items = self.driver.find_elements(By.CLASS_NAME, "product-tile")
+        if len(page_items) == 0:
+            print(f"Finished scraping section: {section}, after {page-1} pages.")
+            return False
+        parsed_ingredients = []
+        for item in page_items:
+            scraped_ingredient = ScrapedIngredient.from_aldi_web_element(
+                item,
+                self.shop_id,
+                self.brand_lookup,
+                self.unit_lookup,
+                self.timestamp,
+            )
+            parsed_ingredients.append(scraped_ingredient)
+        self.updater.update_ingredients(parsed_ingredients)
+        self.driver.quit()
+        return True
+
     def scrape(self):
-        """For now only scrape the first 2 pages of the fresh food section."""
+        """Scrape all of Aldi food products."""
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"Starting scrape for Aldi at {self.timestamp}")
-        try:
+        for section in self.SECTIONS:
+            print(f"Scraping section: {section}.")
             page = 1
-            while True:
-                driver = webdriver.Firefox(options=self.options)
-                driver.implicitly_wait(5)
-                page_url = f"{self.URL}/products/frozen-food?page={page}"
-                driver.get(page_url)
-                page_items = driver.find_elements(By.CLASS_NAME, "product-tile")
-                if len(page_items) == 0:
-                    break
-                parsed_ingredients = []
-                for item in page_items:
-                    scraped_ingredient = ScrapedIngredient.from_aldi_web_element(
-                        item,
-                        self.shop_id,
-                        self.brand_lookup,
-                        self.unit_lookup,
-                        self.timestamp,
-                    )
-                    parsed_ingredients.append(scraped_ingredient)
-                self.updater.update_ingredients(parsed_ingredients)
-                driver.quit()
+            section_continuing = True
+            while section_continuing:
+                try:
+                    section_continuing = self._scrape_page(page, section)
+                except Exception as e:
+                    print(f"Error while scraping Aldi section {section}, page {page}.")
+                    print(e)
+                finally:
+                    self.driver.quit()
                 page += 1
-                if page > 1:  # Limit to first 2 pages for now
-                    break
-        except Exception as e:
-            print(f"Error during scraping: {e}")
-        finally:
-            driver.quit()
+                sleep(5) # wait between scrape requests
 
         # Mark products as not found if they were not updated during this scrape
         self.updater.update_not_found(self.shop_id, self.timestamp)

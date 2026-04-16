@@ -31,40 +31,57 @@ class ScrapedIngredient:
         unit_lookup: UnitLookup,
         timestamp: str,
     ):
-        price_str = web_element.find_element(By.CLASS_NAME, "base-price").text
-        price = float(price_str.split("£")[-1].strip())
+        # hoping it will always at least have a name
+        name = web_element.find_element(By.CLASS_NAME, "product-tile__name").text
+        try:
+            quantity_unit_str = web_element.find_element(By.CLASS_NAME, "product-tile__selling-size-and-comparison").text
+            if quantity_unit_str == "":
+                quantity = 1.0
+                unit = "EACH"
+            else:
+                quantity, unit = quantity_unit_str.splitlines()[0].split()
+                if "£" in quantity:
+                    quantity = quantity.split("/")[1]
+                quantity = float(quantity.replace(",", ""))
+                unit = unit.upper()
 
-        quantity_unit_str = web_element.find_element(By.CLASS_NAME, "product-tile__selling-size-and-comparison").text
-        if quantity_unit_str == "":
-            quantity = 1.0
-            unit = "EACH"
-        else:
-            quantity, unit = quantity_unit_str.splitlines()[0].split()
-            quantity = float(quantity.replace(",", ""))
-            unit = unit.upper()
+            price_str = web_element.find_element(By.CLASS_NAME, "base-price").text
+            last_price_in_str = price_str.split("£")[-1].strip()
+            if "/" in last_price_in_str:
+                price_parts = last_price_in_str.split("/")
+                price = float(price_parts[0])
+                quantity, unit = price_parts[1].split()
+                quantity = float(quantity)
+                unit = unit.upper()
+            else:
+                price = float(last_price_in_str)
 
-        normalized_quantity, normalized_unit = normalize_unit(quantity, unit)
+            if unit in ["PACK"]:
+                unit = "EACH"
+            normalized_quantity, normalized_unit = normalize_unit(quantity, unit)
 
-        base_link = web_element.find_element(By.CLASS_NAME, "base-link").get_attribute("href")
+            base_link = web_element.find_element(By.CLASS_NAME, "base-link").get_attribute("href")
 
-        return cls(
-            name=web_element.find_element(By.CLASS_NAME, "product-tile__name").text,
-            brand_id=brand_lookup.get_id(web_element.find_element(By.CLASS_NAME, "product-tile__brandname").text),
-            price=price,
-            quantity=quantity,
-            unit_id=unit_lookup.get_id(unit),
-            normalized_quantity=normalized_quantity,
-            normalized_unit_id=unit_lookup.get_id(normalized_unit),
-            product_url=base_link,
-            shop_id=shop_id,
-            last_updated=timestamp,
-        )
+            return cls(
+                name=name,
+                brand_id=brand_lookup.get_id(web_element.find_element(By.CLASS_NAME, "product-tile__brandname").text),
+                price=price,
+                quantity=quantity,
+                unit_id=unit_lookup.get_id(unit),
+                normalized_quantity=normalized_quantity,
+                normalized_unit_id=unit_lookup.get_id(normalized_unit),
+                product_url=base_link,
+                shop_id=shop_id,
+                last_updated=timestamp,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Could not parse ingredient with name {name}:\n{e}")
     
     def to_sql(self):
         return f"($${self.name}$$, {self.brand_id}, {self.price}, {self.quantity}, {self.unit_id}, {self.normalized_quantity}, {self.normalized_unit_id}, '{self.product_url}', {self.shop_id}, '{self.last_updated}')"
 
 
-def normalize_unit(quantity: float, unit: str):
+def normalize_unit(quantity: float, unit: str): 
     if unit in ["KG", "G"]:
         normalized_quantity = quantity * 1000 if unit == "KG" else quantity
         normalized_unit = "G"
