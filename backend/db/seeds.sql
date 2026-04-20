@@ -13,4 +13,7 @@ INSERT INTO units (name, type) VALUES
 ('EACH', 'count')
 ON CONFLICT DO NOTHING;
 
--- TODO: add example user for recipe creation and testing
+-- Example user for development
+INSERT into users (username, first_name, password_hash) VALUES
+('adele123', 'Adele', 'saltedpassword123')
+ON CONFLICT DO NOTHING;
