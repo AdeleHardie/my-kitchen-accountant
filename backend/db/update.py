@@ -36,3 +36,4 @@ class IngredientUpdater:
                 SET not_found = TRUE
                 WHERE shop_id = {shop_id} AND last_updated < '{timestamp}'
             """)
+            print(f"{cursor.rowcount} ingredients previously in database not found in this scrape.")

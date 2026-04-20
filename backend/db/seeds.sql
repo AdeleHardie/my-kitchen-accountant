@@ -8,6 +8,7 @@ INSERT INTO units (name, type) VALUES
 ('G', 'mass'),
 ('KG', 'mass'),
 ('ML', 'volume'),
+('CL', 'volume'),
 ('L', 'volume'),
 ('EACH', 'count')
 ON CONFLICT DO NOTHING;

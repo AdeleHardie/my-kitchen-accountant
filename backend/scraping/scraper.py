@@ -27,6 +27,7 @@ class AldiScraper:
         self.brand_lookup = BrandLookup(self.db_connection)
         self.unit_lookup = UnitLookup(self.db_connection)
         self.updater = IngredientUpdater(self.db_connection)
+        self.num_failed_ingredients = 0
 
     def _scrape_page(self, page: int, section: str) -> bool:
         self.driver = webdriver.Firefox(options=self.options)
@@ -46,7 +47,10 @@ class AldiScraper:
                 self.unit_lookup,
                 self.timestamp,
             )
-            parsed_ingredients.append(scraped_ingredient)
+            if scraped_ingredient:
+                parsed_ingredients.append(scraped_ingredient)
+            else:
+                self.num_failed_ingredients += 1
         self.updater.update_ingredients(parsed_ingredients)
         self.driver.quit()
         return True
@@ -74,3 +78,7 @@ class AldiScraper:
         self.updater.update_not_found(self.shop_id, self.timestamp)
 
         print(f"Finished scrape for Aldi at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        if self.num_failed_ingredients == 0:
+            print("All ingredients parsed successfully.")
+        else:
+            print(f"Parsing failed for {self.num_failed_ingredients} ingredients.")
