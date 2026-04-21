@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     recipe_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     name varchar(120) NOT NULL,
+    number_of_portions NUMERIC(5,1) NOT NULL,
     date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
