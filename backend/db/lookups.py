@@ -1,4 +1,6 @@
 from psycopg2.extensions import connection as Connection
+from fastapi import HTTPException
+from api.models import RecipeResponse
 
 
 class BrandLookup:
@@ -24,6 +26,19 @@ class BrandLookup:
             brand_id = self._add_brand(brand_name)
             self.brand_map[brand_name] = brand_id
         return self.brand_map[brand_name]
+    
+
+class RecipeLookup:
+    def __init__(self, db_connection: Connection):
+        self.db_connection = db_connection
+
+    def get_recipe(self, id: int):
+        with self.db_connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM recipes WHERE recipe_id = {id}")
+            result = cursor.fetchone()
+            if not result:
+                raise HTTPException(404, f"Recipe with ID {id} not found.")
+            return RecipeResponse.from_query(result)
     
 
 class ShopLookup:

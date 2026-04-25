@@ -1,17 +1,24 @@
 # --- Standard libraries ---
+from datetime import datetime
 from typing import List
 
-# --- Database ---
-from db.connection import get_db_connection
+# --- DB imports ---
+from psycopg2.errors import ForeignKeyViolation
+from psycopg2.extensions import connection as Connection
 
 # --- Models ---
 from scraping.models import ScrapedIngredient
 
+# --- API Models ---
+from api.models import CreateRecipeRequest
 
-class IngredientUpdater:
-    def __init__(self, db_connection):
+
+class BaseUpdater:
+    def __init__(self, db_connection: Connection):
         self.db_connection = db_connection
 
+
+class IngredientUpdater(BaseUpdater):
     def update_ingredients(self, ingredients: List[ScrapedIngredient]):
         with self.db_connection.cursor() as cursor:
             for ingredient in ingredients:
@@ -37,3 +44,15 @@ class IngredientUpdater:
                 WHERE shop_id = {shop_id} AND last_updated < '{timestamp}'
             """)
             print(f"{cursor.rowcount} ingredients previously in database not found in this scrape.")
+
+
+class RecipeUpdater(BaseUpdater):
+    def create_recipe(self, recipe: CreateRecipeRequest):
+        try:
+            with self.db_connection.cursor() as cursor:
+                cursor.execute(f"""
+                    INSERT INTO recipes (user_id, name, number_of_portions)
+                    VALUES {recipe.to_sql()}
+                """)
+        except ForeignKeyViolation:
+            return f"Invalid user id: {recipe.user_id}"

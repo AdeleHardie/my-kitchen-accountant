@@ -4,6 +4,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings."""
 
+    API_PREFIX: str = "/api"
+    ALLOWED_ORIGINS: str = ""
+
     INITIAL_DATABASE_URL: str
     DATABASE_URL: str
         
