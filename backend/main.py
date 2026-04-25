@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
-from api.routers import recipes
+from api.routers import recipes, ingredients
 
 
 app = FastAPI(
@@ -21,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(ingredients.router, prefix=settings.API_PREFIX)
 app.include_router(recipes.router, prefix=settings.API_PREFIX)
 
 

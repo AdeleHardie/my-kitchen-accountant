@@ -1,5 +1,7 @@
 from psycopg2.extensions import connection as Connection
+from typing import List
 from fastapi import HTTPException
+from api.models.ingredients import IngredientResponse
 from api.models.recipes import RecipeResponse
 
 
@@ -31,6 +33,15 @@ class BrandLookup(BaseLookup):
             brand_id = self._add_brand(brand_name)
             self.brand_map[brand_name] = brand_id
         return self.brand_map[brand_name]
+    
+
+class IngredientLookup(BaseLookup):
+    def search(self, names: List[str]) -> List[IngredientResponse]:
+        with self.db_connection.cursor() as cursor:
+            filters = [f"LOWER(name) LIKE '%{name}%'" for name in names]
+            filter_string = "AND ".join(filters)
+            cursor.execute(f"SELECT * FROM ingredients WHERE {filter_string}")
+            return [IngredientResponse.from_query(result) for result in cursor.fetchall()]
     
 
 class RecipeLookup(BaseLookup):
