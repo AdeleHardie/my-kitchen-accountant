@@ -1,11 +1,18 @@
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Self, Tuple
+from fastapi import HTTPException
+from pydantic import AfterValidator, BaseModel
+from typing import Annotated, Self, Tuple
+
+
+def greater_than_zero(value: float) -> float:
+    if value <= 0:
+        raise HTTPException(400, f"Recipe portions must be greater than zero, got: {value}")
+    return value
 
 
 class CreateRecipeRequest(BaseModel):
     name: str
-    number_of_portions: float
+    number_of_portions: Annotated[float, AfterValidator(greater_than_zero)]
     user_id: int
 
     def to_sql(self) -> str:

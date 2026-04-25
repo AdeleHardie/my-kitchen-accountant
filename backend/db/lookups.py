@@ -1,6 +1,6 @@
 from psycopg2.extensions import connection as Connection
 from fastapi import HTTPException
-from api.models import RecipeResponse
+from api.models.recipes import RecipeResponse
 
 
 class BrandLookup:

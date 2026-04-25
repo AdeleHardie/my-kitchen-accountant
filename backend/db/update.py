@@ -9,8 +9,9 @@ from psycopg2.extensions import connection as Connection
 # --- Models ---
 from scraping.models import ScrapedIngredient
 
-# --- API Models ---
-from api.models import CreateRecipeRequest
+# --- API ---
+from api.models.recipes import CreateRecipeRequest, RecipeResponse
+from fastapi import HTTPException
 
 
 class BaseUpdater:
@@ -48,11 +49,16 @@ class IngredientUpdater(BaseUpdater):
 
 class RecipeUpdater(BaseUpdater):
     def create_recipe(self, recipe: CreateRecipeRequest):
-        try:
-            with self.db_connection.cursor() as cursor:
+        with self.db_connection.cursor() as cursor:
+            try:
                 cursor.execute(f"""
                     INSERT INTO recipes (user_id, name, number_of_portions)
                     VALUES {recipe.to_sql()}
+                    RETURNING recipe_id
                 """)
-        except ForeignKeyViolation:
-            return f"Invalid user id: {recipe.user_id}"
+                new_recipe_id = cursor.fetchone()[0]
+                return int(new_recipe_id)
+            except ForeignKeyViolation:
+                raise HTTPException(400, f"No user with ID {recipe.user_id} found.")
+            except Exception as e:
+                raise HTTPException(400, f"Recipe creation failed. Exception raised: {e}")
