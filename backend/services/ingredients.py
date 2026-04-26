@@ -19,7 +19,7 @@ class IngredientManager(BaseManager):
         with self.db_connection.cursor() as cursor:
             for ingredient in ingredients:
                 cursor.execute(f"""
-                    INSERT INTO ingredients (name, brand_id, price, quantity, unit_id, normalized_quantity, normalized_unit_id, product_url, shop_id, last_updated)
+                    INSERT INTO ingredients (name, brand_id, price, quantity, unit_id, product_url, shop_id, last_updated)
                     VALUES {ingredient}
                     ON CONFLICT (product_url) DO UPDATE SET
                         price = EXCLUDED.price,

@@ -16,8 +16,6 @@ class ScrapedIngredient:
     price: float
     quantity: float
     unit_id: int
-    normalized_quantity: float
-    normalized_unit_id: int
     product_url: str
     shop_id: int
     last_updated: str
@@ -59,7 +57,6 @@ class ScrapedIngredient:
 
             if unit in ["PACK"]:
                 unit = "EACH"
-            normalized_quantity, normalized_unit = normalize_unit(quantity, unit)
 
             base_link = web_element.find_element(By.CLASS_NAME, "base-link").get_attribute("href")
 
@@ -69,8 +66,6 @@ class ScrapedIngredient:
                 price=price,
                 quantity=quantity,
                 unit_id=unit_lookup.get_id(unit),
-                normalized_quantity=normalized_quantity,
-                normalized_unit_id=unit_lookup.get_id(normalized_unit),
                 product_url=base_link,
                 shop_id=shop_id,
                 last_updated=timestamp,
@@ -81,19 +76,4 @@ class ScrapedIngredient:
             return None
     
     def to_sql(self):
-        return f"($${self.name}$$, {self.brand_id}, {self.price}, {self.quantity}, {self.unit_id}, {self.normalized_quantity}, {self.normalized_unit_id}, '{self.product_url}', {self.shop_id}, '{self.last_updated}')"
-
-
-def normalize_unit(quantity: float, unit: str): 
-    if unit in ["KG", "G"]:
-        normalized_quantity = quantity * 1000 if unit == "KG" else quantity
-        normalized_unit = "G"
-    elif unit in ["L", "CL", "ML"]:
-        volume_map = {"L": 1000, "CL": 10, "ML": 1}
-        normalized_quantity = quantity * volume_map[unit]
-        normalized_unit = "ML"
-    else:
-        normalized_quantity = quantity
-        normalized_unit = unit
-
-    return normalized_quantity, normalized_unit
+        return f"($${self.name}$$, {self.brand_id}, {self.price}, {self.quantity}, {self.unit_id}, '{self.product_url}', {self.shop_id}, '{self.last_updated}')"

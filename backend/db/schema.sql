@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS units (
     unit_id SERIAL PRIMARY KEY,
     name VARCHAR(4) UNIQUE NOT NULL,
-    type VARCHAR(20) NOT NULL
+    type VARCHAR(20) NOT NULL,
+    conversion_factor NUMERIC(10, 4) NOT NULL,
+    normalized_unit_id INT REFERENCES units(unit_id)
 );
 
 -- Main tables
@@ -71,3 +73,23 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
 
     UNIQUE (recipe_id, ingredient_id)
 );
+
+-- Unit conversion triggers
+CREATE OR REPLACE FUNCTION normalize_unit_and_quantity() RETURNS trigger AS $normalize_unit_and_quantity$
+    BEGIN
+        SELECT conversion_factor, normalized_unit_id 
+        INTO NEW.normalized_quantity, NEW.normalized_unit_id
+        FROM units 
+        WHERE unit_id = NEW.unit_id;
+        NEW.normalized_quantity := NEW.quantity * NEW.normalized_quantity;
+        RETURN NEW;
+    END;
+$normalize_unit_and_quantity$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER ingredient_normalization
+BEFORE INSERT OR UPDATE ON ingredients
+    FOR EACH ROW EXECUTE FUNCTION normalize_unit_and_quantity();
+
+CREATE OR REPLACE TRIGGER recipe_igredient_normalization
+BEFORE INSERT OR UPDATE ON recipe_ingredients
+    FOR EACH ROW EXECUTE FUNCTION normalize_unit_and_quantity();
