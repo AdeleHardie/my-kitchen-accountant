@@ -5,7 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 # -- Database lookups
-from db.lookups import BrandLookup, ShopLookup, UnitLookup
+from services.brands import BrandManager
+from services.units import UnitManager
 
 
 @dataclass
@@ -27,8 +28,8 @@ class ScrapedIngredient:
         cls,
         web_element: WebElement,
         shop_id: int,
-        brand_lookup: BrandLookup,
-        unit_lookup: UnitLookup,
+        brand_lookup: BrandManager,
+        unit_lookup: UnitManager,
         timestamp: str,
     ):
         # hoping it will always at least have a name

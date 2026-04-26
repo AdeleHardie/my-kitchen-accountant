@@ -11,8 +11,10 @@ from selenium.webdriver.common.by import By
 from scraping.models import ScrapedIngredient
 # --- Database ---
 from db.connection import get_db_connection
-from db.lookups import BrandLookup, ShopLookup, UnitLookup
-from db.update import IngredientUpdater
+from services.brands import BrandManager
+from services.ingredients import IngredientManager
+from services.shops import ShopManager
+from services.units import UnitManager
 
 
 class AldiScraper:
@@ -23,10 +25,10 @@ class AldiScraper:
         self.options = Options()
         self.options.add_argument("--headless")
         self.db_connection = get_db_connection()
-        self.shop_id = ShopLookup(self.db_connection).get_id("Aldi")
-        self.brand_lookup = BrandLookup(self.db_connection)
-        self.unit_lookup = UnitLookup(self.db_connection)
-        self.updater = IngredientUpdater(self.db_connection)
+        self.shop_id = ShopManager(self.db_connection).get_id("Aldi")
+        self.brand_lookup = BrandManager(self.db_connection)
+        self.unit_lookup = UnitManager(self.db_connection)
+        self.updater = IngredientManager(self.db_connection)
         self.num_failed_ingredients = 0
 
     def _scrape_page(self, page: int, section: str) -> bool:
@@ -48,7 +50,7 @@ class AldiScraper:
                 self.timestamp,
             )
             if scraped_ingredient:
-                parsed_ingredients.append(scraped_ingredient)
+                parsed_ingredients.append(scraped_ingredient.to_sql())
             else:
                 self.num_failed_ingredients += 1
         self.updater.update_ingredients(parsed_ingredients)
