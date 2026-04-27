@@ -33,3 +33,24 @@ class RecipeResponse(BaseModel):
             date_created=query_result[4],
         )
 
+
+class RecipeIngredientResponse(BaseModel):
+    recipe_ingredient_id: int
+    recipe_id: int
+    ingredient_id: int
+    quantity: float
+    unit_id: int
+    normalized_quantity: float
+    normalized_unit_id: int
+
+    @classmethod
+    def from_query(cls, query_result: Tuple) -> Self:
+        return cls(
+            recipe_ingredient_id=query_result[0],
+            recipe_id=query_result[1],
+            ingredient_id=query_result[2],
+            quantity=query_result[3],
+            unit_id=query_result[4],
+            normalized_quantity=query_result[5],
+            normalized_unit_id=query_result[6],
+        )
