@@ -50,7 +50,7 @@ class AldiScraper:
                 self.timestamp,
             )
             if scraped_ingredient:
-                parsed_ingredients.append(scraped_ingredient.to_sql())
+                parsed_ingredients.append(scraped_ingredient.__dict__)
             else:
                 self.num_failed_ingredients += 1
         self.updater.update_ingredients(parsed_ingredients)

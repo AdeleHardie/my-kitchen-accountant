@@ -74,6 +74,3 @@ class ScrapedIngredient:
             print(f"Could not parse ingredient with name {name}:\n{e}")
             print(f"Ingredient web element text: {web_element.text}")
             return None
-    
-    def to_sql(self):
-        return f"($${self.name}$$, {self.brand_id}, {self.price}, {self.quantity}, {self.unit_id}, '{self.product_url}', {self.shop_id}, '{self.last_updated}')"

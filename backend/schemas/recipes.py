@@ -14,9 +14,6 @@ class CreateRecipeRequest(BaseModel):
     name: str
     number_of_portions: Annotated[float, AfterValidator(greater_than_zero)]
     user_id: int
-
-    def to_sql(self) -> str:
-        return f"({self.user_id}, $${self.name}$$, {self.number_of_portions})"
     
 
 class RecipeResponse(BaseModel):

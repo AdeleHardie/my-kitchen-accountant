@@ -2,6 +2,7 @@
 
 from fastapi import HTTPException
 from psycopg2.errors import ForeignKeyViolation
+from typing import Optional
 
 # --- Internal imports ---
 from schemas.recipes import CreateRecipeRequest, RecipeResponse
@@ -12,11 +13,13 @@ class RecipeManager(BaseManager):
     def create_recipe(self, recipe: CreateRecipeRequest):
         with self.db_connection.cursor() as cursor:
             try:
-                cursor.execute(f"""
+                cursor.execute("""
                     INSERT INTO recipes (user_id, name, number_of_portions)
-                    VALUES {recipe.to_sql()}
+                    VALUES (%(user_id)s, %(name)s, %(number_of_portions)s)
                     RETURNING recipe_id
-                """)
+                    """,
+                    recipe.__dict__,
+                )
                 new_recipe_id = cursor.fetchone()[0]
                 return int(new_recipe_id)
             except ForeignKeyViolation:
@@ -26,8 +29,18 @@ class RecipeManager(BaseManager):
             
     def get_recipe(self, id: int) -> RecipeResponse:
         with self.db_connection.cursor() as cursor:
-            cursor.execute(f"SELECT * FROM recipes WHERE recipe_id = {id}")
+            cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s", (id,))
             result = cursor.fetchone()
             if not result:
                 raise HTTPException(404, f"Recipe with ID {id} not found.")
             return RecipeResponse.from_query(result)
+        
+
+def RecipeIngredientManager(BaseManager):
+    def update_ingredient(
+        recipe_id: int,
+        ingredient_id: int,
+        quantity: Optional[float] = None,
+        unit_id: Optional[float] = None,
+    ):
+        pass

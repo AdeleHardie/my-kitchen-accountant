@@ -7,7 +7,8 @@ class BrandManager(BaseManager):
     def _add_brand(self, brand_name: str):
         with self.db_connection.cursor() as cursor:
             cursor.execute(
-                f"INSERT INTO brands (name) VALUES ($${brand_name}$$) RETURNING brand_id"
+                "INSERT INTO brands (name) VALUES (%s) RETURNING brand_id",
+                (brand_name,),
             )
             return cursor.fetchone()[0]
 
