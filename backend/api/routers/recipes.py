@@ -30,6 +30,14 @@ def create_recipe(
     return RecipeManager(db_connection).get_recipe(new_recipe_id)
 
 
+@router.delete("/{recipe_id}/delete")
+def delete_recipe(
+    recipe_id: int,
+    db_connection: Connection = Depends(get_db_connection)
+):
+    return RecipeManager(db_connection).delete_recipe(recipe_id)
+
+
 @router.post("/{recipe_id}/add/{ingredient_id}")
 def add_ingredient_to_recipe(
     recipe_id: int,

@@ -31,6 +31,17 @@ class RecipeManager(BaseManager):
             except Exception as e:
                 raise HTTPException(400, f"Recipe creation failed. Exception raised: {e}")
             
+    def delete_recipe(self, id: int) -> str:
+        with self.db_connection.cursor() as cursor:
+            try:
+                cursor.execute("DELETE FROM recipes WHERE recipe_id = %s RETURNING recipe_id", (id,))
+                result = cursor.fetchall()
+                if len(result) == 0:
+                    raise HTTPException(404, f"Recipe with ID {id} not found.")
+                return f"Recipe with ID {id} deleted successfully."
+            except Exception as e:
+                raise HTTPException(400, f"Could not delete recipe with ID {id}: {e}")
+            
     def get_recipe(self, id: int) -> RecipeResponse:
         with self.db_connection.cursor() as cursor:
             cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s", (id,))
