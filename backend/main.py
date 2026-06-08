@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.auth import router as auth_router
 from core.config import settings
-from api.routers import recipes, ingredients
+from api.routers import ingredients, recipes
 
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(ingredients.router, prefix=settings.API_PREFIX)
 app.include_router(recipes.router, prefix=settings.API_PREFIX)
+app.include_router(auth_router, prefix=settings.API_PREFIX)
 
 
 if __name__ == "__main__":

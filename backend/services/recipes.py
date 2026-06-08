@@ -1,8 +1,8 @@
 """Interactions with the `recipes` and `recipe_ingredients` tables in the database."""
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from psycopg2.errors import ForeignKeyViolation
-from typing import Optional
+from typing import List, Optional
 
 # --- Internal imports ---
 from schemas.recipes import (
@@ -34,7 +34,10 @@ class RecipeManager(BaseManager):
     def delete_recipe(self, id: int) -> str:
         with self.db_connection.cursor() as cursor:
             try:
-                cursor.execute("DELETE FROM recipes WHERE recipe_id = %s RETURNING recipe_id", (id,))
+                cursor.execute(
+                    "DELETE FROM recipes WHERE recipe_id = %s AND user_id = %s RETURNING recipe_id",
+                    (id, self.user_id),
+                )
                 result = cursor.fetchall()
                 if len(result) == 0:
                     raise HTTPException(404, f"Recipe with ID {id} not found.")
@@ -42,9 +45,18 @@ class RecipeManager(BaseManager):
             except Exception as e:
                 raise HTTPException(400, f"Could not delete recipe with ID {id}: {e}")
             
+    def get_all_recipes(self) -> List[RecipeResponse]:
+        with self.db_connection.cursor() as cursor:
+            try:
+                cursor.execute("SELECT * FROM recipes WHERE user_id = %s", (self.user_id,))
+                results = cursor.fetchall()
+                return [RecipeResponse.from_query(result) for result in results]
+            except Exception as e:
+                raise HTTPException(400, "Recipe retrieval failed.")
+            
     def get_recipe(self, id: int) -> RecipeResponse:
         with self.db_connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s", (id,))
+            cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s and user_id = %s", (id, self.user_id))
             result = cursor.fetchone()
             if not result:
                 raise HTTPException(404, f"Recipe with ID {id} not found.")

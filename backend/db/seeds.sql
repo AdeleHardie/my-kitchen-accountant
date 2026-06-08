@@ -22,5 +22,5 @@ INSERT INTO units (name, type, conversion_factor, normalized_unit_id) VALUES
 
 -- Example user for development
 INSERT into users (username, first_name, password_hash) VALUES
-('adele123', 'Adele', 'saltedpassword123')
+('adele123', 'Adele', '$argon2id$v=19$m=65536,t=3,p=4$4Lo5Jp6aW9Ut1Yz99OxemQ$WH5JCj7jcf9shJSRJnCRcR87j3q8RGeCiDdIqhvBd5c')
 ON CONFLICT DO NOTHING;

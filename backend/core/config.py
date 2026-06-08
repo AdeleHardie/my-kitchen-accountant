@@ -5,10 +5,13 @@ class Settings(BaseSettings):
     """Application settings."""
 
     API_PREFIX: str = "/api"
-    ALLOWED_ORIGINS: str = ""
+    ALLOWED_ORIGINS: str = "*"
 
     INITIAL_DATABASE_URL: str
     DATABASE_URL: str
+
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
         
     class Config:
         env_file = ".env"
