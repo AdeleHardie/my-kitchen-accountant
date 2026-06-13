@@ -1,13 +1,15 @@
 """Dependencies to handle authentication and authorization."""
 
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security.utils import get_authorization_scheme_param
 import jwt
 from jwt.exceptions import InvalidTokenError
 from psycopg2.extensions import connection as Connection
 from pydantic import BaseModel
 from pwdlib import PasswordHash
+from time import time
 from typing import Annotated, Dict
 
 # --- Internal imports ---
@@ -19,21 +21,28 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash("dummypassword")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/users/token")
 router = APIRouter(
     prefix="/users"
 )
+
+class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
+    async def __call__(self, request: Request) -> str | None:
+        authorization = request.cookies.get("access_token")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if not authorization or scheme.lower() != "bearer":
+            if self.auto_error:
+                raise self.make_not_authenticated_error()
+            else:
+                return None
+        return param
+    
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl=f"{settings.API_PREFIX}/users/login")
 
 # region Models
 
 class Token(BaseModel):
     access_token: str
     token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None
 
 
 class User(BaseModel):
@@ -83,17 +92,7 @@ def authenticate_user(username: str, password: str):
 
 # region Handle tokens
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
-
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -103,22 +102,22 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username = payload.get("sub")
         if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
+            raise HTTPException(401, "Could not get username from token")
     except InvalidTokenError:
-        raise credentials_exception
-    user = get_user(username=token_data.username)
+        raise HTTPException(401, "Failed to decode token")
+    user = get_user(username=username)
     if user is None:
-        raise credentials_exception
+        raise HTTPException(401, "User not found")
     return user
 
 
 # region Routers
 
-@router.post("/token")
+@router.post("/login")
 async def login_for_access_token(
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Token:
+) -> Dict:
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -126,11 +125,16 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+    access_token = jwt.encode({"sub": user.username, "iat": str(time()).split(".")[0]}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+    response.set_cookie(
+        key="access_token",
+        value=f"bearer {access_token}",
+        httponly=True,
+        samesite="lax",
     )
-    return Token(access_token=access_token, token_type="bearer")
+
+    return {"message": "log in successful"}
 
 @router.get("/me")
 async def read_users_me(
